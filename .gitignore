@@ -146,3 +146,5 @@ dist/
 
 # Prisma
 prisma/migrations/
+/参考バックエンド
+/参考拡張機能
