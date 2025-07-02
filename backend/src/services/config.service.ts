@@ -1,5 +1,5 @@
 import { prisma } from '../config/database';
-import { Config } from '../generated/prisma';
+import { Config } from '@prisma/client';
 import { logger } from '../utils/logger';
 
 interface ConfigUpdateData {

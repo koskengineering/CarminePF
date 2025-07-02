@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { Config } from '@prisma/client';
 import { ConfigService } from './config.service';
 import { ItemsService } from './items.service';
 import { logger } from '../utils/logger';
@@ -106,7 +107,7 @@ export class KeepaService {
     }
   }
 
-  private filterAsins(asins: string[], _: any): string[] {
+  private filterAsins(asins: string[], _config: Config): string[] {
     // Extract valid ASINs (format: B[A-Z0-9]{9})
     const validAsins = asins.filter(asin => {
       const isValid = /^B[A-Z0-9]{9}$/.test(asin);

@@ -1,5 +1,5 @@
 import { prisma } from '../config/database';
-import { Item, Prisma } from '../generated/prisma';
+import { Item } from '@prisma/client';
 import { logger } from '../utils/logger';
 
 export class ItemsService {

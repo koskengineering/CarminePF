@@ -15,11 +15,16 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts"
   },
-  "keywords": ["keepa", "amazon", "automation"],
+  "keywords": [
+    "keepa",
+    "amazon",
+    "automation"
+  ],
   "author": "",
   "license": "ISC",
   "description": "CarminePF Backend - Keepa Product Finder Automation System",
   "devDependencies": {
+    "@eslint/js": "^9.30.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.10",
@@ -27,18 +32,20 @@
     "@typescript-eslint/eslint-plugin": "^8.35.1",
     "@typescript-eslint/parser": "^8.35.1",
     "eslint": "^9.30.1",
+    "globals": "^16.3.0",
     "nodemon": "^3.1.10",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.35.1"
   },
   "dependencies": {
     "@prisma/client": "^6.11.0",
-    "prisma": "^6.11.0",
-    "express": "^4.21.2",
+    "axios": "^1.7.9",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "axios": "^1.7.9",
-    "node-cron": "^3.0.3"
+    "express": "^4.21.2",
+    "node-cron": "^3.0.3",
+    "prisma": "^6.11.0"
   }
 }
