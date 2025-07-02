@@ -1,0 +1,45 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: carminepf-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: carminepf_dev
+      MYSQL_USER: carminepf
+      MYSQL_PASSWORD: carminepf123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+    networks:
+      - carminepf-network-dev
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: carminepf-backend-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: mysql://carminepf:carminepf123@mysql:3306/carminepf_dev
+      NODE_ENV: development
+      PORT: 3000
+    depends_on:
+      - mysql
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - carminepf-network-dev
+    command: npm run dev
+
+volumes:
+  mysql_dev_data:
+
+networks:
+  carminepf-network-dev:
+    driver: bridge

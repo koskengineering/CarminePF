@@ -1,0 +1,43 @@
+// SQLite version for quick start (no Docker required)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Config {
+  id            Int      @id @default(autoincrement())
+  url           String
+  apiKey        String
+  isActive      Boolean  @default(false)
+  checkInterval Int      @default(60) // seconds
+  deleteAfterDays Int    @default(7)
+  isAmazonOnly  Boolean  @default(false)
+  isFBAOnly     Boolean  @default(false)
+  minStarRating Float?
+  minReviewCount Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ProductId {
+  id        Int      @id @default(autoincrement())
+  asin      String   @unique
+  createdAt DateTime @default(now())
+  items     Item[]
+}
+
+model Item {
+  id           Int       @id @default(autoincrement())
+  productId    Int
+  product      ProductId @relation(fields: [productId], references: [id], onDelete: Cascade)
+  processedAt  DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+// SQLiteはインデックスを自動的に処理

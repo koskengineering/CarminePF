@@ -1,0 +1,25 @@
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Logs
+*.log
+
+# Extension package files
+*.crx
+*.pem
+web-ext-artifacts/
+
+# Development files
+.web-ext-config.js
