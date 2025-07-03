@@ -46,18 +46,19 @@ async function handlePurchaseComplete(data) {
   console.log('Purchase completed:', data);
   
   // Store purchase history
-  const history = await chrome.storage.local.get('purchaseHistory') || { purchaseHistory: [] };
-  history.purchaseHistory.push({
+  const stored = await chrome.storage.local.get('purchaseHistory');
+  const history = stored.purchaseHistory || [];
+  history.push({
     ...data,
     timestamp: new Date().toISOString()
   });
   
   // Keep only last 100 purchases
-  if (history.purchaseHistory.length > 100) {
-    history.purchaseHistory = history.purchaseHistory.slice(-100);
+  if (history.length > 100) {
+    history.splice(0, history.length - 100);
   }
   
-  await chrome.storage.local.set({ purchaseHistory: history.purchaseHistory });
+  await chrome.storage.local.set({ purchaseHistory: history });
   
   // Close the tab after a delay
   if (data.tabId) {
@@ -74,18 +75,19 @@ async function handlePurchaseError(data) {
   console.error('Purchase error:', data);
   
   // Store error in history
-  const errors = await chrome.storage.local.get('purchaseErrors') || { purchaseErrors: [] };
-  errors.purchaseErrors.push({
+  const stored = await chrome.storage.local.get('purchaseErrors');
+  const errors = stored.purchaseErrors || [];
+  errors.push({
     ...data,
     timestamp: new Date().toISOString()
   });
   
   // Keep only last 50 errors
-  if (errors.purchaseErrors.length > 50) {
-    errors.purchaseErrors = errors.purchaseErrors.slice(-50);
+  if (errors.length > 50) {
+    errors.splice(0, errors.length - 50);
   }
   
-  await chrome.storage.local.set({ purchaseErrors: errors.purchaseErrors });
+  await chrome.storage.local.set({ purchaseErrors: errors });
 }
 
 // Initialize extension on install
