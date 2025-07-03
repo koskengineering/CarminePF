@@ -18,10 +18,12 @@ export class ItemsController {
         await this.itemsService.markItemsAsProcessed(items.map(item => item.id));
       }
 
-      // Transform items to include ASIN
+      // Transform items to include ASIN and seller info
       const response = items.map(item => ({
         id: item.id,
         asin: item.product.asin,
+        sellerId: item.sellerId,
+        price: item.price,
         createdAt: item.createdAt
       }));
 

@@ -18,7 +18,9 @@ class AmazonAutoPurchase {
       timestamp: new Date().toISOString(),
       error: null,
       orderNumber: null,
-      tabId: null
+      tabId: null,
+      pageInfo: null,
+      debugInfo: null
     };
 
     this.init();
@@ -179,38 +181,129 @@ class AmazonAutoPurchase {
   async selectQuantityAndPurchase() {
     this.result.status = 'selecting_quantity';
     
-    // Try to select quantity (default to 1)
-    const quantitySelector = document.querySelector('#quantity');
-    if (quantitySelector) {
-      quantitySelector.value = '1';
-      this.log('Quantity set to 1', 'info');
+    try {
+      // Try to select quantity (default to 1)
+      const quantitySelector = document.querySelector('#quantity');
+      if (quantitySelector) {
+        // Check if quantity selector is editable
+        if (quantitySelector.disabled || quantitySelector.readOnly) {
+          this.log('Quantity selector is disabled or readonly', 'warn');
+          this.result.debugInfo = this.collectDebugInfo('quantity_selection', {
+            reason: 'quantity_selector_disabled',
+            disabled: quantitySelector.disabled,
+            readOnly: quantitySelector.readOnly
+          });
+        }
+        
+        const oldValue = quantitySelector.value;
+        quantitySelector.value = '1';
+        
+        // Trigger change events
+        quantitySelector.dispatchEvent(new Event('change', { bubbles: true }));
+        quantitySelector.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // Verify the value was set
+        if (quantitySelector.value !== '1') {
+          this.log(`Quantity change failed: expected 1, got ${quantitySelector.value}`, 'error');
+          this.result.debugInfo = this.collectDebugInfo('quantity_selection', {
+            reason: 'quantity_change_failed',
+            expectedValue: '1',
+            actualValue: quantitySelector.value,
+            oldValue: oldValue
+          });
+        } else {
+          this.log('Quantity set to 1', 'info');
+        }
+      } else {
+        this.log('Quantity selector not found', 'warn');
+        this.result.debugInfo = this.collectDebugInfo('quantity_selection', {
+          reason: 'quantity_selector_not_found'
+        });
+      }
+
+      // Wait a moment for any UI updates
+      await this.sleep(1000);
+
+      // Click "Buy Now" button
+      await this.clickBuyNow();
+      
+    } catch (error) {
+      this.result.error = `Quantity selection error: ${error.message}`;
+      this.result.debugInfo = this.collectDebugInfo('quantity_selection', {
+        reason: 'exception',
+        error: error.message,
+        stack: error.stack
+      });
+      throw error;
     }
-
-    // Wait a moment for any UI updates
-    await this.sleep(1000);
-
-    // Click "Buy Now" button
-    await this.clickBuyNow();
   }
 
   async clickBuyNow() {
     this.result.status = 'clicking_buy_now';
     
-    const buyNowButton = document.querySelector('#buy-now-button, [name="submit.buy-now"]');
-    
-    if (!buyNowButton) {
-      throw new Error('Buy Now button not found');
+    try {
+      const buyNowButton = document.querySelector('#buy-now-button, [name="submit.buy-now"]');
+      
+      if (!buyNowButton) {
+        this.result.debugInfo = this.collectDebugInfo('buy_now_click', {
+          reason: 'button_not_found'
+        });
+        throw new Error('Buy Now button not found');
+      }
+
+      if (buyNowButton.disabled) {
+        this.result.debugInfo = this.collectDebugInfo('buy_now_click', {
+          reason: 'button_disabled',
+          buttonText: buyNowButton.textContent?.trim(),
+          buttonClasses: buyNowButton.className
+        });
+        throw new Error('Buy Now button is disabled');
+      }
+
+      this.log('Clicking Buy Now button', 'info');
+      
+      // Try multiple click methods
+      const clickMethods = [
+        () => buyNowButton.click(),
+        () => buyNowButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })),
+        () => {
+          if (buyNowButton.form) {
+            buyNowButton.form.submit();
+          }
+        }
+      ];
+      
+      let clickSuccessful = false;
+      for (const clickMethod of clickMethods) {
+        try {
+          clickMethod();
+          clickSuccessful = true;
+          break;
+        } catch (clickError) {
+          this.log(`Click method failed: ${clickError.message}`, 'warn');
+        }
+      }
+      
+      if (!clickSuccessful) {
+        this.result.debugInfo = this.collectDebugInfo('buy_now_click', {
+          reason: 'all_click_methods_failed'
+        });
+        throw new Error('All click methods failed');
+      }
+
+      // Wait for navigation to checkout
+      await this.waitForCheckout();
+      
+    } catch (error) {
+      if (!this.result.debugInfo) {
+        this.result.debugInfo = this.collectDebugInfo('buy_now_click', {
+          reason: 'exception',
+          error: error.message,
+          stack: error.stack
+        });
+      }
+      throw error;
     }
-
-    if (buyNowButton.disabled) {
-      throw new Error('Buy Now button is disabled');
-    }
-
-    this.log('Clicking Buy Now button', 'info');
-    buyNowButton.click();
-
-    // Wait for navigation to checkout
-    await this.waitForCheckout();
   }
 
   async waitForCheckout() {
@@ -238,6 +331,11 @@ class AmazonAutoPurchase {
       await this.sleep(500);
     }
 
+    this.result.debugInfo = this.collectDebugInfo('checkout_process', {
+      reason: 'checkout_page_timeout',
+      waitTime: maxWait,
+      currentUrl: window.location.href
+    });
     throw new Error('Checkout page did not load within timeout');
   }
 
@@ -262,6 +360,11 @@ class AmazonAutoPurchase {
       // Wait for order confirmation
       await this.waitForOrderConfirmation();
     } else {
+      this.result.debugInfo = this.collectDebugInfo('checkout_process', {
+        reason: 'place_order_button_unavailable',
+        buttonExists: !!placeOrderButton,
+        buttonDisabled: placeOrderButton?.disabled
+      });
       throw new Error('Place Order button not found or disabled');
     }
   }
@@ -276,6 +379,10 @@ class AmazonAutoPurchase {
 
       const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
       if (!iframeDoc) {
+        this.result.debugInfo = this.collectDebugInfo('checkout_process', {
+          reason: 'turbo_iframe_access_denied',
+          iframeExists: !!iframe
+        });
         throw new Error('Cannot access turbo checkout iframe');
       }
 
@@ -287,9 +394,20 @@ class AmazonAutoPurchase {
         
         await this.waitForOrderConfirmation();
       } else {
+        this.result.debugInfo = this.collectDebugInfo('checkout_process', {
+          reason: 'turbo_button_not_found',
+          iframeAccessible: true
+        });
         throw new Error('Turbo checkout button not found');
       }
     } catch (error) {
+      if (!this.result.debugInfo) {
+        this.result.debugInfo = this.collectDebugInfo('checkout_process', {
+          reason: 'turbo_checkout_exception',
+          error: error.message,
+          stack: error.stack
+        });
+      }
       this.log(`Turbo checkout error: ${error.message}`, 'error');
       throw error;
     }
@@ -317,12 +435,21 @@ class AmazonAutoPurchase {
       // Check for errors
       const errorElement = document.querySelector('.error, .alert-error, [data-test-id="error"]');
       if (errorElement) {
+        this.result.debugInfo = this.collectDebugInfo('checkout_process', {
+          reason: 'order_error_detected',
+          errorMessage: errorElement.textContent.trim()
+        });
         throw new Error(`Order error: ${errorElement.textContent.trim()}`);
       }
 
       await this.sleep(1000);
     }
 
+    this.result.debugInfo = this.collectDebugInfo('checkout_process', {
+      reason: 'order_confirmation_timeout',
+      waitTime: maxWait,
+      currentUrl: window.location.href
+    });
     throw new Error('Order confirmation not received within timeout');
   }
 
@@ -365,8 +492,183 @@ class AmazonAutoPurchase {
     });
   }
 
+  /**
+   * Collect page information for debugging
+   */
+  collectPageInfo() {
+    try {
+      const pageInfo = {
+        url: window.location.href,
+        title: document.title,
+        timestamp: new Date().toISOString(),
+        elements: {}
+      };
+
+      // Collect key elements information
+      const selectors = {
+        productTitle: '#productTitle',
+        price: '.a-price-whole, .a-price .a-offscreen',
+        availability: '#availability span',
+        quantitySelector: '#quantity',
+        buyNowButton: '#buy-now-button, [name="submit.buy-now"]',
+        addToCartButton: '#add-to-cart-button',
+        sellerInfo: '#merchant-info, [data-feature-name="merchant"] a',
+        starRating: '[data-hook="average-star-rating"] .a-icon-alt',
+        reviewCount: '[data-hook="total-review-count"], #acrCustomerReviewText',
+        errors: '.error, .alert-error, [data-test-id="error"]'
+      };
+
+      for (const [key, selector] of Object.entries(selectors)) {
+        const elements = document.querySelectorAll(selector);
+        pageInfo.elements[key] = Array.from(elements).map(el => ({
+          exists: true,
+          text: el.textContent?.trim() || '',
+          value: el.value || '',
+          disabled: el.disabled || false,
+          visible: el.offsetParent !== null,
+          classes: el.className,
+          id: el.id,
+          tagName: el.tagName
+        }));
+      }
+
+      // Collect form information
+      const forms = document.querySelectorAll('form');
+      pageInfo.forms = Array.from(forms).map(form => ({
+        id: form.id,
+        action: form.action,
+        method: form.method,
+        inputs: Array.from(form.querySelectorAll('input, select')).map(input => ({
+          name: input.name,
+          type: input.type,
+          value: input.value,
+          disabled: input.disabled
+        }))
+      }));
+
+      // Collect any error messages
+      const errorElements = document.querySelectorAll('.error, .alert, .warning, [role="alert"]');
+      pageInfo.errorMessages = Array.from(errorElements).map(el => el.textContent?.trim()).filter(text => text);
+
+      // Save page screenshot info (we can't take actual screenshot in content script)
+      pageInfo.viewport = {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scrollTop: window.scrollY,
+        scrollLeft: window.scrollX
+      };
+
+      return pageInfo;
+    } catch (error) {
+      console.error('Error collecting page info:', error);
+      return { error: error.message, timestamp: new Date().toISOString() };
+    }
+  }
+
+  /**
+   * Collect debug information for failed operations
+   */
+  collectDebugInfo(operation, additionalInfo = {}) {
+    const debugInfo = {
+      operation,
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      ...additionalInfo
+    };
+
+    // Add specific debug info based on operation
+    switch (operation) {
+      case 'quantity_selection':
+        debugInfo.quantityElements = this.collectQuantityElementsInfo();
+        break;
+      case 'buy_now_click':
+        debugInfo.buyNowElements = this.collectBuyNowElementsInfo();
+        break;
+      case 'checkout_process':
+        debugInfo.checkoutElements = this.collectCheckoutElementsInfo();
+        break;
+      case 'general_error':
+        debugInfo.pageInfo = this.collectPageInfo();
+        break;
+    }
+
+    return debugInfo;
+  }
+
+  collectQuantityElementsInfo() {
+    const quantitySelectors = ['#quantity', '[name="quantity"]', '.quantity-select'];
+    const info = {};
+    
+    quantitySelectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      info[selector] = Array.from(elements).map(el => ({
+        exists: true,
+        tagName: el.tagName,
+        type: el.type,
+        value: el.value,
+        disabled: el.disabled,
+        readonly: el.readOnly,
+        style: el.style.cssText,
+        computedStyle: window.getComputedStyle(el).display,
+        options: el.tagName === 'SELECT' ? Array.from(el.options).map(opt => ({
+          value: opt.value,
+          text: opt.text,
+          selected: opt.selected
+        })) : null
+      }));
+    });
+
+    return info;
+  }
+
+  collectBuyNowElementsInfo() {
+    const buyNowSelectors = ['#buy-now-button', '[name="submit.buy-now"]', '.buy-now'];
+    const info = {};
+    
+    buyNowSelectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      info[selector] = Array.from(elements).map(el => ({
+        exists: true,
+        tagName: el.tagName,
+        type: el.type,
+        disabled: el.disabled,
+        text: el.textContent?.trim(),
+        style: el.style.cssText,
+        computedStyle: window.getComputedStyle(el).display,
+        onclick: el.onclick ? el.onclick.toString() : null
+      }));
+    });
+
+    return info;
+  }
+
+  collectCheckoutElementsInfo() {
+    const checkoutSelectors = ['#placeOrder', '[name="placeOrder"]', '.place-order-button'];
+    const info = {};
+    
+    checkoutSelectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      info[selector] = Array.from(elements).map(el => ({
+        exists: true,
+        tagName: el.tagName,
+        disabled: el.disabled,
+        text: el.textContent?.trim(),
+        style: el.style.cssText
+      }));
+    });
+
+    return info;
+  }
+
   reportResult() {
     this.result.timestamp = new Date().toISOString();
+    
+    // Collect page info if there was an error
+    if (this.result.status !== 'completed') {
+      this.result.pageInfo = this.collectPageInfo();
+      this.result.debugInfo = this.collectDebugInfo('general_error');
+    }
     
     const messageData = {
       action: this.result.status === 'completed' ? 'purchaseComplete' : 'purchaseError',

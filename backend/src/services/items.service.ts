@@ -1,8 +1,14 @@
 import { prisma } from '../config/database';
 import { Item } from '@prisma/client';
 import { logger } from '../utils/logger';
+import { KeepaProductService, ProductInfo } from './keepa-product.service';
 
 export class ItemsService {
+  private keepaProductService: KeepaProductService;
+
+  constructor() {
+    this.keepaProductService = new KeepaProductService();
+  }
   async getUnprocessedItems(): Promise<(Item & { product: { asin: string } })[]> {
     try {
       const items = await prisma.item.findMany({
@@ -85,7 +91,7 @@ export class ItemsService {
     }
   }
 
-  async createItemsForNewAsins(asins: string[]): Promise<void> {
+  async createItemsForNewAsins(asins: string[], apiKey: string): Promise<void> {
     try {
       // Get existing ASINs
       const existingProducts = await prisma.productId.findMany({
@@ -107,6 +113,16 @@ export class ItemsService {
         return;
       }
 
+      // Get product information including seller IDs from Keepa
+      logger.info(`Fetching product info for ${newAsins.length} new ASINs`);
+      const productInfos = await this.keepaProductService.getProductInfo(newAsins, apiKey);
+      
+      // Create a map for quick lookup
+      const productInfoMap = new Map<string, ProductInfo>();
+      for (const info of productInfos) {
+        productInfoMap.set(info.asin, info);
+      }
+
       // Create new product IDs and items in a transaction
       await prisma.$transaction(async (tx) => {
         // Create product IDs
@@ -114,22 +130,28 @@ export class ItemsService {
           newAsins.map(asin =>
             tx.productId.create({
               data: { asin },
-              select: { id: true }
+              select: { id: true, asin: true }
             })
           )
         );
 
-        // Create items
-        const itemsData = productIds.map(product => ({
-          productId: product.id
-        }));
+        // Create items with seller info
+        const itemsData = productIds.map(product => {
+          const productInfo = productInfoMap.get(product.asin);
+          return {
+            productId: product.id,
+            sellerId: productInfo?.cheapestNewSellerId || null,
+            price: productInfo?.cheapestNewPrice || null
+          };
+        });
 
         await tx.item.createMany({
           data: itemsData
         });
       });
 
-      logger.info(`Created ${newAsins.length} new product IDs and items for purchase`);
+      const itemsWithSellers = productInfos.filter(p => p.cheapestNewSellerId).length;
+      logger.info(`Created ${newAsins.length} new product IDs and items for purchase (${itemsWithSellers} with seller info)`);
     } catch (error) {
       logger.error('Error creating items for new ASINs', error);
       throw error;
