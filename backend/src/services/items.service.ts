@@ -9,7 +9,7 @@ export class ItemsService {
   constructor() {
     this.keepaProductService = new KeepaProductService();
   }
-  async getUnprocessedItems(): Promise<(Item & { product: { asin: string } })[]> {
+  async getUnprocessedItems(): Promise<any[]> {
     try {
       const items = await prisma.item.findMany({
         where: {
