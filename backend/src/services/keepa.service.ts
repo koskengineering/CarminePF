@@ -76,9 +76,10 @@ export class KeepaService {
           // Mark first run as complete
           await this.configService.markFirstRunComplete();
         } else {
-          // Subsequent runs: Create items only for new ASINs
+          // Subsequent runs: Create items only for new ASINs with seller info
           logger.info(`Checking for new ASINs among ${filteredAsins.length} fetched ASINs`);
-          await this.itemsService.createItemsForNewAsins(filteredAsins);
+          const keepaApiKey = process.env.KEEPA_API_KEY || config.apiKey;
+          await this.itemsService.createItemsForNewAsins(filteredAsins, keepaApiKey);
         }
       }
 
