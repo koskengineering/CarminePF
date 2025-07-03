@@ -141,7 +141,7 @@ export class KeepaProductService {
    */
   private processProduct(product: KeepaProduct): ProductInfo | null {
     try {
-      const { asin, title, offers } = product;
+      const { offers } = product;
 
       // First try to get seller info from offers
       if (offers && offers.length > 0) {
