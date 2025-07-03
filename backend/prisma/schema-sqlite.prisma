@@ -36,6 +36,8 @@ model Item {
   id           Int       @id @default(autoincrement())
   productId    Int
   product      ProductId @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sellerId     String?   // Amazon seller ID for the cheapest new offer
+  price        Float?    // Price in yen (smallest unit)
   processedAt  DateTime?
   createdAt    DateTime  @default(now())
 }
