@@ -1,6 +1,12 @@
 // Content script for Amazon automatic purchase
 console.log('CarminePF content script loaded');
 
+// Prevent duplicate execution
+if (window.AmazonAutoPurchase) {
+  console.log('CarminePF already initialized, skipping...');
+  return;
+}
+
 class AmazonAutoPurchase {
   constructor() {
     this.urlParams = new URLSearchParams(window.location.search);
@@ -691,6 +697,9 @@ class AmazonAutoPurchase {
              this.result.status === 'completed' ? 'success' : 'error');
   }
 }
+
+// Make class available globally
+window.AmazonAutoPurchase = AmazonAutoPurchase;
 
 // Initialize auto purchase if this is a product page
 if (window.location.href.includes('amazon.co.jp/dp/') || 
