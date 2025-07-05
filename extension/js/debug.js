@@ -122,4 +122,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initial load
   loadErrors();
   loadSuccess();
+  
+  // Also show processing items for debugging
+  chrome.storage.local.get('processingItems', (data) => {
+    if (data.processingItems && data.processingItems.length > 0) {
+      console.log('処理中のアイテム:', data.processingItems);
+    }
+  });
 });

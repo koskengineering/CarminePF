@@ -270,12 +270,24 @@ class CarminePFSidePanel {
       }
 
       // Open new tab for purchase
-      await chrome.tabs.create({
+      const tab = await chrome.tabs.create({
         url: url.toString(),
         active: false
       });
 
-      this.log(`購入ページを開きました: ${item.asin}`, 'success');
+      this.log(`購入ページを開きました: ${item.asin} (Tab ID: ${tab.id})`, 'success');
+      
+      // Store processing info for debugging
+      const processingInfo = await chrome.storage.local.get('processingItems') || {};
+      const items = processingInfo.processingItems || [];
+      items.push({
+        itemId: item.id,
+        asin: item.asin,
+        tabId: tab.id,
+        url: url.toString(),
+        startTime: new Date().toISOString()
+      });
+      await chrome.storage.local.set({ processingItems: items });
       
       // Add delay between processing items to prevent overwhelming
       await new Promise(resolve => setTimeout(resolve, 2000));
