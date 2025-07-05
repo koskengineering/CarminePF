@@ -34,6 +34,7 @@
   "side_panel": {
     "default_path": "sidepanel.html"
   },
+  "options_page": "debug.html",
   "action": {
     "default_title": "CarminePFを開く",
     "default_icon": {
