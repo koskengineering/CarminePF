@@ -202,23 +202,39 @@ class AmazonAutoPurchase {
         }
         
         const oldValue = quantitySelector.value;
-        quantitySelector.value = '1';
+        
+        // Get the maximum value from the selector
+        let maxQuantity = '1';
+        if (quantitySelector.tagName === 'SELECT') {
+          // For dropdown selector, get the last option value
+          const options = quantitySelector.options;
+          if (options.length > 0) {
+            maxQuantity = options[options.length - 1].value;
+          }
+        } else if (quantitySelector.hasAttribute('max')) {
+          // For input type number, use max attribute
+          maxQuantity = quantitySelector.getAttribute('max');
+        }
+        
+        // Set to maximum quantity
+        quantitySelector.value = maxQuantity;
+        this.log(`Setting quantity to maximum: ${maxQuantity}`, 'info');
         
         // Trigger change events
         quantitySelector.dispatchEvent(new Event('change', { bubbles: true }));
         quantitySelector.dispatchEvent(new Event('input', { bubbles: true }));
         
         // Verify the value was set
-        if (quantitySelector.value !== '1') {
-          this.log(`Quantity change failed: expected 1, got ${quantitySelector.value}`, 'error');
+        if (quantitySelector.value !== maxQuantity) {
+          this.log(`Quantity change failed: expected ${maxQuantity}, got ${quantitySelector.value}`, 'error');
           this.result.debugInfo = this.collectDebugInfo('quantity_selection', {
             reason: 'quantity_change_failed',
-            expectedValue: '1',
+            expectedValue: maxQuantity,
             actualValue: quantitySelector.value,
             oldValue: oldValue
           });
         } else {
-          this.log('Quantity set to 1', 'info');
+          this.log(`Quantity set to maximum: ${maxQuantity}`, 'success');
         }
       } else {
         this.log('Quantity selector not found', 'warn');
