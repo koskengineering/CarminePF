@@ -111,7 +111,9 @@
       availability: this.getElementText('#availability span'),
       seller: this.getSellerInfo(),
       isFBA: this.checkIfFBA(),
-      isAmazon: this.checkIfAmazon()
+      isAmazon: this.checkIfAmazon(),
+      isInStock: this.checkInStock(),
+      hasBuyNowButton: this.checkBuyNowButton()
     };
 
     this.log(`Product info: ${JSON.stringify(info)}`, 'debug');
@@ -158,7 +160,43 @@
     return seller.includes('Amazon.co.jp') || seller.includes('アマゾン');
   }
 
+  checkInStock() {
+    const availability = this.getElementText('#availability span');
+    // Check for out of stock indicators
+    if (availability.includes('在庫切れ') || 
+        availability.includes('入荷時期は未定') ||
+        availability.includes('現在在庫切れ') ||
+        availability.includes('Out of Stock')) {
+      return false;
+    }
+    
+    // Check if "Buy Now" or "Add to Cart" buttons are present
+    const buyNowButton = document.querySelector('#buy-now-button');
+    const addToCartButton = document.querySelector('#add-to-cart-button');
+    
+    return !!(buyNowButton || addToCartButton);
+  }
+
+  checkBuyNowButton() {
+    const buyNowButton = document.querySelector('#buy-now-button');
+    return !!buyNowButton && !buyNowButton.disabled;
+  }
+
   meetsRequirements(productInfo) {
+    // Check if product is in stock
+    if (!productInfo.isInStock) {
+      this.log('Product is out of stock', 'warn');
+      this.result.error = 'Product is out of stock';
+      return false;
+    }
+
+    // Check if Buy Now button exists (required for purchase)
+    if (!productInfo.hasBuyNowButton) {
+      this.log('Buy Now button not available', 'warn');
+      this.result.error = 'Buy Now button not available';
+      return false;
+    }
+
     // Check star rating requirement
     if (this.minStarRating && (!productInfo.starRating || productInfo.starRating < this.minStarRating)) {
       this.log(`Star rating ${productInfo.starRating} below minimum ${this.minStarRating}`, 'warn');
