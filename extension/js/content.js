@@ -81,12 +81,19 @@
 
   async startPurchaseFlow() {
     try {
+      // Wait for critical elements to load
+      this.log('Waiting for page elements to load...', 'info');
+      await this.waitForPageElements();
+      
+      // Additional wait to ensure dynamic content is loaded
+      await this.sleep(2000);
+      
       // Check if product meets criteria
       const productInfo = await this.getProductInfo();
       
       if (!this.meetsRequirements(productInfo)) {
         this.result.status = 'rejected';
-        this.result.error = 'Product does not meet requirements';
+        this.result.error = this.result.error || 'Product does not meet requirements';
         this.reportResult();
         return;
       }
@@ -100,6 +107,32 @@
       this.reportResult();
       this.log(`Purchase error: ${error.message}`, 'error');
     }
+  }
+
+  async waitForPageElements() {
+    const maxWaitTime = 15000; // 15 seconds
+    const checkInterval = 500; // Check every 500ms
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < maxWaitTime) {
+      // Check if key elements are present
+      const productTitle = document.querySelector('#productTitle');
+      const priceElement = document.querySelector('.a-price-whole, .a-price .a-offscreen');
+      const availabilityElement = document.querySelector('#availability');
+      
+      // Check if either buy button exists (some products only have one)
+      const buyNowButton = document.querySelector('#buy-now-button');
+      const addToCartButton = document.querySelector('#add-to-cart-button');
+      
+      if (productTitle && priceElement && availabilityElement && (buyNowButton || addToCartButton)) {
+        this.log('All critical elements loaded', 'info');
+        return;
+      }
+      
+      await this.sleep(checkInterval);
+    }
+    
+    this.log('Warning: Some elements may not have loaded completely', 'warn');
   }
 
   async getProductInfo() {
@@ -180,6 +213,20 @@
   checkBuyNowButton() {
     const buyNowButton = document.querySelector('#buy-now-button');
     return !!buyNowButton && !buyNowButton.disabled;
+  }
+  
+  async waitForElement(selector, timeout = 10000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      const element = document.querySelector(selector);
+      if (element) {
+        return element;
+      }
+      await this.sleep(100);
+    }
+    
+    return null;
   }
 
   meetsRequirements(productInfo) {
@@ -305,13 +352,28 @@
     this.result.status = 'clicking_buy_now';
     
     try {
-      const buyNowButton = document.querySelector('#buy-now-button, [name="submit.buy-now"]');
+      // Wait for buy now button with multiple selectors
+      this.log('Waiting for Buy Now button...', 'info');
+      let buyNowButton = await this.waitForElement('#buy-now-button');
+      
+      if (!buyNowButton) {
+        // Try alternative selector
+        buyNowButton = await this.waitForElement('[name="submit.buy-now"]');
+      }
+      
+      if (!buyNowButton) {
+        // Final attempt - check if page needs more time to load
+        this.log('Buy Now button not found, waiting additional time...', 'warn');
+        await this.sleep(3000);
+        buyNowButton = document.querySelector('#buy-now-button, [name="submit.buy-now"]');
+      }
       
       if (!buyNowButton) {
         this.result.debugInfo = this.collectDebugInfo('buy_now_click', {
-          reason: 'button_not_found'
+          reason: 'button_not_found_after_wait',
+          waitTime: '13+ seconds'
         });
-        throw new Error('Buy Now button not found');
+        throw new Error('Buy Now button not found after extended wait');
       }
 
       if (buyNowButton.disabled) {
