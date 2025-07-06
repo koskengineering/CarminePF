@@ -191,10 +191,10 @@ class CarminePFSidePanel {
     // Stop any existing polling
     this.stopPolling();
 
-    // Poll for new items every 5 seconds (reduced frequency)
+    // Poll for new items every 2 seconds for faster response
     this.itemCheckInterval = setInterval(() => {
       this.checkForNewItems();
-    }, 5000);
+    }, 2000);
   }
 
   stopPolling() {
