@@ -163,14 +163,25 @@ export class KeepaProductService {
   private processOffersData(product: KeepaProduct): ProductInfo {
     const { asin, title, offers } = product;
     
-    // Filter for valid new offers (condition 0 or 1)
-    const newOffers = offers!.filter(offer => 
+    // Filter for valid new offers (condition 0 = New, fallback to 1 = Like New if no New available)
+    let newOffers = offers!.filter(offer => 
       offer.condition !== undefined &&
-      offer.condition <= 1 && // 0 = New, 1 = Like New
+      offer.condition === 0 && // 0 = New only
       offer.sellerId && 
       offer.offerCSV &&
       offer.offerCSV[0] > 0
     );
+    
+    // If no NEW condition offers, fallback to Like New
+    if (newOffers.length === 0) {
+      newOffers = offers!.filter(offer => 
+        offer.condition !== undefined &&
+        offer.condition === 1 && // 1 = Like New
+        offer.sellerId && 
+        offer.offerCSV &&
+        offer.offerCSV[0] > 0
+      );
+    }
 
     if (newOffers.length === 0) {
       return this.createEmptyProductInfo(product);
