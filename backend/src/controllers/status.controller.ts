@@ -1,16 +1,23 @@
 import { Request, Response } from 'express';
 import { SchedulerService } from '../services/scheduler.service';
+import { ConfigService } from '../services/config.service';
 import { logger } from '../utils/logger';
 
 export class StatusController {
   private schedulerService: SchedulerService;
+  private configService: ConfigService;
 
   constructor() {
     this.schedulerService = SchedulerService.getInstance();
+    this.configService = new ConfigService();
   }
 
   start = async (_: Request, res: Response): Promise<void> => {
     try {
+      // Clear items data when starting monitoring (same as when saving config)
+      await this.configService.clearData();
+      logger.info('Cleared items data before starting monitoring');
+      
       const result = await this.schedulerService.start();
       if (result.success) {
         res.json({ message: 'Monitoring started successfully', status: 'running' });
