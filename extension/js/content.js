@@ -1,13 +1,16 @@
 // Content script for Amazon automatic purchase
-console.log('CarminePF content script loaded');
+(function() {
+  'use strict';
+  
+  console.log('CarminePF content script loaded');
 
-// Prevent duplicate execution
-if (window.AmazonAutoPurchase) {
-  console.log('CarminePF already initialized, skipping...');
-  return;
-}
+  // Prevent duplicate execution
+  if (window.AmazonAutoPurchase) {
+    console.log('CarminePF already initialized, skipping...');
+    return;
+  }
 
-class AmazonAutoPurchase {
+  class AmazonAutoPurchase {
   constructor() {
     this.urlParams = new URLSearchParams(window.location.search);
     this.isAutoCheckout = this.urlParams.get('autoCheckOut') === 'true';
@@ -735,3 +738,5 @@ if (window.location.href.includes('amazon.co.jp/dp/') ||
     }, 1000);
   }
 }
+
+})();
