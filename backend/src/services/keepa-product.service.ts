@@ -163,42 +163,32 @@ export class KeepaProductService {
   private processOffersData(product: KeepaProduct): ProductInfo {
     const { asin, title, offers } = product;
     
-    // Filter for valid new offers (condition 0 = New, fallback to 1 = Like New if no New available)
-    let newOffers = offers!.filter(offer => 
+    // Filter for valid new offers (condition 1 = New only)
+    const newOffers = offers!.filter(offer => 
       offer.condition !== undefined &&
-      offer.condition === 0 && // 0 = New only
+      offer.condition === 1 && // 1 = New (not 0 = Unknown)
       offer.sellerId && 
       offer.offerCSV &&
-      offer.offerCSV[0] > 0
+      offer.offerCSV.length >= 2 &&
+      offer.offerCSV[offer.offerCSV.length - 2] > 0 // Latest price > 0
     );
-    
-    // If no NEW condition offers, fallback to Like New
-    if (newOffers.length === 0) {
-      newOffers = offers!.filter(offer => 
-        offer.condition !== undefined &&
-        offer.condition === 1 && // 1 = Like New
-        offer.sellerId && 
-        offer.offerCSV &&
-        offer.offerCSV[0] > 0
-      );
-    }
 
     if (newOffers.length === 0) {
       return this.createEmptyProductInfo(product);
     }
 
-    // Sort by total price (offerCSV[0] is price, offerCSV[1] is shipping)
+    // Sort by total price (latest price + latest shipping)
     newOffers.sort((a, b) => {
-      const priceA = a.offerCSV![0];
-      const shippingA = a.offerCSV![1] || 0;
-      const priceB = b.offerCSV![0];
-      const shippingB = b.offerCSV![1] || 0;
+      const priceA = a.offerCSV![a.offerCSV!.length - 2];
+      const shippingA = a.offerCSV![a.offerCSV!.length - 1] || 0;
+      const priceB = b.offerCSV![b.offerCSV!.length - 2];
+      const shippingB = b.offerCSV![b.offerCSV!.length - 1] || 0;
       return (priceA + shippingA) - (priceB + shippingB);
     });
 
     const cheapestOffer = newOffers[0];
-    // Convert from Keepa price units (appears to be 1/1000 yen) to yen
-    const priceInYen = Math.round(cheapestOffer.offerCSV![0] / 1000);
+    // Convert from yen (smallest currency unit) to yen - no conversion needed for Japan
+    const priceInYen = cheapestOffer.offerCSV![cheapestOffer.offerCSV!.length - 2];
 
     return {
       asin,
