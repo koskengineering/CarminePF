@@ -13,7 +13,7 @@
   class AmazonAutoPurchase {
   constructor() {
     this.urlParams = new URLSearchParams(window.location.search);
-    this.isAutoCheckout = this.urlParams.get('autoCheckOut') === 'true';
+    this.isAutoCheckout = this.urlParams.get('ac') === 'true';
     this.itemId = this.urlParams.get('id');
     this.minStarRating = parseFloat(this.urlParams.get('review_star')) || null;
     this.minReviewCount = parseInt(this.urlParams.get('review_count')) || null;

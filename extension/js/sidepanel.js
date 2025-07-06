@@ -253,7 +253,7 @@ class CarminePFSidePanel {
         this.log(`セラーID不明のため通常ページで開きます`, 'warn');
       }
       
-      url.searchParams.set('autoCheckOut', 'true');
+      url.searchParams.set('ac', 'true');
       url.searchParams.set('id', item.id.toString());
       
       if (config.minStarRating) {
