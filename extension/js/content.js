@@ -800,6 +800,23 @@
 
     this.log(`Purchase result: ${this.result.status}`, 
              this.result.status === 'completed' ? 'success' : 'error');
+    
+    // Request tab closure after 10 seconds
+    this.scheduleTabClosure();
+  }
+  
+  scheduleTabClosure() {
+    this.log('Tab will close in 10 seconds', 'info');
+    setTimeout(() => {
+      chrome.runtime.sendMessage({
+        action: 'closeTab',
+        tabId: this.result.tabId
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('Could not close tab:', chrome.runtime.lastError.message);
+        }
+      });
+    }, 10000);
   }
 }
 

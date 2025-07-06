@@ -33,6 +33,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
       break;
       
+    case 'closeTab':
+      if (request.tabId) {
+        chrome.tabs.remove(request.tabId).catch(err => {
+          console.error('Error closing tab:', err);
+        });
+      }
+      sendResponse({ success: true });
+      break;
+      
     default:
       console.warn('Unknown action:', request.action);
       sendResponse({ success: false, error: 'Unknown action' });
@@ -59,15 +68,6 @@ async function handlePurchaseComplete(data) {
   }
   
   await chrome.storage.local.set({ purchaseHistory: history });
-  
-  // Close the tab after a delay
-  if (data.tabId) {
-    setTimeout(() => {
-      chrome.tabs.remove(data.tabId).catch(err => {
-        console.error('Error closing tab:', err);
-      });
-    }, 5000);
-  }
 }
 
 // Handle purchase error
