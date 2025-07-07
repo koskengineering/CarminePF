@@ -24,6 +24,8 @@ database.db
 database.db-journal
 *.sqlite
 *.sqlite3
+dev.db
+dev.db-journal
 
 # TypeScript
 *.tsbuildinfo
@@ -50,6 +52,11 @@ pm2.json
 # Testing
 .nyc_output/
 coverage/
+test-*.js
+!test-new-asins.js
+*.test.db
+test.db
+.env.test
 
 # Cache
 .cache/
@@ -58,3 +65,9 @@ temp/
 
 # OS
 .DS_Store
+
+# Export files
+exports/
+
+# Temporary/debug files
+carminepf-errors-*.json

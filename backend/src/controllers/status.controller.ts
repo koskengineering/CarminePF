@@ -14,9 +14,9 @@ export class StatusController {
 
   start = async (_: Request, res: Response): Promise<void> => {
     try {
-      // Clear items data when starting monitoring (same as when saving config)
-      await this.configService.clearData();
-      logger.info('Cleared items data before starting monitoring');
+      // Set first run flag when starting monitoring
+      await this.configService.setFirstRun();
+      logger.info('Set first run flag - initial execution will only register ASINs without purchasing');
       
       const result = await this.schedulerService.start();
       if (result.success) {

@@ -28,6 +28,17 @@ export class ItemsService {
         take: 3 // Limit to 3 items per request to prevent overwhelming
       });
 
+      if (items.length > 0) {
+        logger.info(`🛒 Extension fetched ${items.length} unprocessed items:`, {
+          items: items.map(item => ({
+            id: item.id,
+            asin: item.product.asin,
+            sellerId: item.sellerId || 'N/A',
+            price: item.price ? `¥${item.price}` : 'N/A'
+          }))
+        });
+      }
+
       return items;
     } catch (error) {
       logger.error('Error getting unprocessed items', error);
@@ -113,9 +124,29 @@ export class ItemsService {
         return;
       }
 
+      // Log new ASINs detected
+      logger.info(`🆕 New ASINs detected: ${newAsins.length}`, {
+        asins: newAsins
+      });
+
       // Get product information including seller IDs from Keepa
       logger.info(`Fetching product info for ${newAsins.length} new ASINs`);
       const productInfos = await this.keepaProductService.getProductInfo(newAsins, apiKey);
+      
+      // Log detailed product information
+      productInfos.forEach(info => {
+        logger.info(`📦 Product details for ${info.asin}:`, {
+          asin: info.asin,
+          title: info.title,
+          sellerId: info.cheapestNewSellerId || 'N/A',
+          price: info.cheapestNewPrice ? `¥${info.cheapestNewPrice}` : 'N/A',
+          isFBA: info.isFBA,
+          isPrime: info.isPrime,
+          url: info.cheapestNewSellerId 
+            ? `https://www.amazon.co.jp/dp/${info.asin}?m=${info.cheapestNewSellerId}`
+            : `https://www.amazon.co.jp/dp/${info.asin}`
+        });
+      });
       
       // Create a map for quick lookup
       const productInfoMap = new Map<string, ProductInfo>();
@@ -141,7 +172,9 @@ export class ItemsService {
           return {
             productId: product.id,
             sellerId: productInfo?.cheapestNewSellerId || null,
-            price: productInfo?.cheapestNewPrice || null
+            price: productInfo?.cheapestNewPrice || null,
+            // Mark as processed if this is the first run after start
+            processedAt: null  // Will be marked as processed separately if needed
           };
         });
 
@@ -151,14 +184,14 @@ export class ItemsService {
       });
 
       const itemsWithSellers = productInfos.filter(p => p.cheapestNewSellerId).length;
-      logger.info(`Created ${newAsins.length} new product IDs and items for purchase (${itemsWithSellers} with seller info)`);
+      logger.info(`✅ Created ${newAsins.length} new product IDs and items for purchase (${itemsWithSellers} with seller info)`);
     } catch (error) {
       logger.error('Error creating items for new ASINs', error);
       throw error;
     }
   }
 
-  async markUnprocessedItemsAsProcessedAfterApiCall(): Promise<void> {
+  async markAllUnprocessedItemsAsProcessed(): Promise<void> {
     try {
       const result = await prisma.item.updateMany({
         where: {
@@ -170,7 +203,7 @@ export class ItemsService {
       });
 
       if (result.count > 0) {
-        logger.info(`Marked ${result.count} unprocessed items as processed after API call`);
+        logger.info(`🔄 Marked ${result.count} unprocessed items as processed (first run baseline)`);
       }
     } catch (error) {
       logger.error('Error marking unprocessed items as processed', error);

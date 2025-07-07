@@ -80,6 +80,22 @@ export class ConfigService {
     }
   }
 
+  async setFirstRun(): Promise<void> {
+    try {
+      const config = await this.getConfig();
+      if (config) {
+        await prisma.config.update({
+          where: { id: config.id },
+          data: { isFirstRun: true }
+        });
+        logger.info('First run flag set');
+      }
+    } catch (error) {
+      logger.error('Error setting first run flag', error);
+      throw error;
+    }
+  }
+
   async markFirstRunComplete(): Promise<void> {
     try {
       const config = await this.getConfig();
