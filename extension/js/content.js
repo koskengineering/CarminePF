@@ -45,6 +45,7 @@
     const isOrderCompletePage = window.location.href.includes('/gp/buy/thankyou/') || 
                                window.location.href.includes('/gp/buy/spc/') ||
                                window.location.href.includes('orderID=') ||
+                               window.location.href.includes('purchaseId=') ||
                                window.location.href.includes('/orderconfirmation/');
     
     if (isCheckoutPage || isPaymentPage || isOrderCompletePage) {
