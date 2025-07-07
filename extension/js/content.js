@@ -36,6 +36,27 @@
   }
 
   async init() {
+    // Check if this is a checkout page, payment page, or order complete page
+    const isCheckoutPage = window.location.href.includes('/checkout/') || 
+                          window.location.href.includes('/buy/checkout/');
+    const isPaymentPage = (window.location.href.includes('/checkout/p/') && window.location.href.includes('/pay')) ||
+                         window.location.href.includes('pipelineType=Chewbacca') ||
+                         window.location.href.includes('isBuyNow=1');
+    const isOrderCompletePage = window.location.href.includes('/gp/buy/thankyou/') || 
+                               window.location.href.includes('/gp/buy/spc/') ||
+                               window.location.href.includes('orderID=') ||
+                               window.location.href.includes('/orderconfirmation/');
+    
+    if (isCheckoutPage || isPaymentPage || isOrderCompletePage) {
+      const pageType = isPaymentPage ? 'payment' : (isCheckoutPage ? 'checkout' : 'order complete');
+      this.log(`Detected ${pageType} page (${window.location.href}), will close in 10 seconds`, 'info');
+      setTimeout(() => {
+        this.log('Auto-closing page', 'info');
+        window.close();
+      }, 10000);
+      return;
+    }
+    
     if (!this.isAutoCheckout) {
       console.log('Not an auto checkout page');
       return;
@@ -823,9 +844,8 @@
 // Make class available globally
 window.AmazonAutoPurchase = AmazonAutoPurchase;
 
-// Initialize auto purchase if this is a product page
-if (window.location.href.includes('amazon.co.jp/dp/') || 
-    window.location.href.includes('amazon.co.jp/gp/product/')) {
+// Initialize auto purchase for all Amazon pages (to handle checkout/payment pages too)
+if (window.location.href.includes('amazon.co.jp')) {
   
   // Check if already initialized to prevent duplicate execution
   if (!window.carminePFInitialized) {

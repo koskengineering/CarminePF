@@ -238,18 +238,21 @@ class CarminePFSidePanel {
         'isFBAOnly'
       ]);
 
-      // Create URL with seller ID and query parameters for auto checkout
-      let url;
+      // Create URL with th and psc parameters (seller ID temporarily disabled)
+      let url = new URL(`https://www.amazon.co.jp/dp/${item.asin}`);
+      
+      // Always add th and psc parameters
+      url.searchParams.set('th', '1');
+      url.searchParams.set('psc', '1');
+      
+      // TODO: Re-enable seller ID parameter later
+      // if (item.sellerId) {
+      //   url.searchParams.set('m', item.sellerId);
+      // }
+      
       if (item.sellerId) {
-        // Use seller-specific URL when seller ID is available
-        url = new URL(`https://www.amazon.co.jp/dp/${item.asin}`);
-        url.searchParams.set('m', item.sellerId);
-        url.searchParams.set('th', '1');
-        url.searchParams.set('psc', '1');
-        this.log(`セラーID指定: ${item.sellerId} (価格: ¥${item.price || 'N/A'})`, 'info');
+        this.log(`セラーID情報: ${item.sellerId} (価格: ¥${item.price || 'N/A'}) - セラーIDパラメータ無しで開きます`, 'info');
       } else {
-        // Fallback to regular product page
-        url = new URL(`https://www.amazon.co.jp/dp/${item.asin}`);
         this.log(`セラーID不明のため通常ページで開きます`, 'warn');
       }
       

@@ -166,10 +166,20 @@ pm2 save
 2. **Baseline Establishment**: First run saves all current ASINs
 3. **Monitoring**: System polls Keepa API every minute
 4. **Detection**: New ASINs trigger purchase items creation
-5. **Automation**: Chrome extension processes purchase queue
-6. **Validation**: Products checked against configured criteria
-7. **Purchase**: Automated Amazon checkout process
-8. **Logging**: Complete audit trail maintained
+5. **Seller Discovery**: Keepa product API fetches cheapest new seller ID and price
+6. **Automation**: Chrome extension processes purchase queue with seller-specific URLs
+7. **Validation**: Products checked against configured criteria
+8. **Purchase**: Automated Amazon checkout process targeting specific seller
+9. **Logging**: Complete audit trail maintained
+
+### Enhanced Seller Targeting
+
+The system now automatically:
+- Fetches seller information for new products using Keepa's product API
+- Identifies the cheapest new seller for each ASIN
+- Opens Amazon pages with seller-specific URLs (`?m=SELLER_ID`)
+- Stores price information for reference
+- Falls back to regular product pages if seller ID unavailable
 
 ## Security Considerations
 
