@@ -82,6 +82,23 @@
           </div>
 
           <div class="form-group">
+            <label for="minProfitRate">最低利益率（%）</label>
+            <select id="minProfitRate" name="minProfitRate" class="form-control">
+              <option value="">指定なし</option>
+              <option value="5">5%</option>
+              <option value="10">10%</option>
+              <option value="15">15%</option>
+              <option value="20">20%</option>
+              <option value="25">25%</option>
+              <option value="30">30%</option>
+              <option value="35">35%</option>
+              <option value="40">40%</option>
+              <option value="50">50%</option>
+            </select>
+            <small class="form-text">90日平均価格を販売価格、現在の新品価格を購入価格として計算</small>
+          </div>
+
+          <div class="form-group">
             <label for="deleteAfterDays">削除期限（日）</label>
             <input 
               type="number" 

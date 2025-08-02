@@ -10,6 +10,7 @@ interface ConfigUpdateData {
   isFBAOnly: boolean;
   minStarRating: number | null;
   minReviewCount: number | null;
+  minProfitRate: number | null;
 }
 
 export class ConfigService {
@@ -40,6 +41,7 @@ export class ConfigService {
           isFBAOnly: data.isFBAOnly,
           minStarRating: data.minStarRating,
           minReviewCount: data.minReviewCount,
+          minProfitRate: data.minProfitRate,
           isActive: false,
           isFirstRun: true // Reset first run flag when config is updated
         }

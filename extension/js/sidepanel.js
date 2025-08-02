@@ -16,6 +16,7 @@ class CarminePFSidePanel {
       isFBAOnly: document.getElementById('isFBAOnly'),
       minStarRating: document.getElementById('minStarRating'),
       minReviewCount: document.getElementById('minReviewCount'),
+      minProfitRate: document.getElementById('minProfitRate'),
       deleteAfterDays: document.getElementById('deleteAfterDays')
     };
 
@@ -48,6 +49,7 @@ class CarminePFSidePanel {
         'isFBAOnly',
         'minStarRating',
         'minReviewCount',
+        'minProfitRate',
         'deleteAfterDays'
       ]);
 
@@ -58,6 +60,7 @@ class CarminePFSidePanel {
       this.elements.isFBAOnly.checked = stored.isFBAOnly || false;
       this.elements.minStarRating.value = stored.minStarRating || '';
       this.elements.minReviewCount.value = stored.minReviewCount || '';
+      this.elements.minProfitRate.value = stored.minProfitRate || '';
       this.elements.deleteAfterDays.value = stored.deleteAfterDays || 7;
     } catch (error) {
       this.log('設定の読み込みに失敗しました', 'error');
@@ -74,6 +77,7 @@ class CarminePFSidePanel {
       isFBAOnly: this.elements.isFBAOnly.checked,
       minStarRating: this.elements.minStarRating.value ? parseFloat(this.elements.minStarRating.value) : null,
       minReviewCount: this.elements.minReviewCount.value ? parseInt(this.elements.minReviewCount.value) : null,
+      minProfitRate: this.elements.minProfitRate.value ? parseFloat(this.elements.minProfitRate.value) : null,
       deleteAfterDays: parseInt(this.elements.deleteAfterDays.value) || 7
     };
 
@@ -93,7 +97,8 @@ class CarminePFSidePanel {
           isAmazonOnly: config.isAmazonOnly,
           isFBAOnly: config.isFBAOnly,
           minStarRating: config.minStarRating,
-          minReviewCount: config.minReviewCount
+          minReviewCount: config.minReviewCount,
+          minProfitRate: config.minProfitRate
         })
       });
 
@@ -234,6 +239,7 @@ class CarminePFSidePanel {
       const config = await chrome.storage.local.get([
         'minStarRating',
         'minReviewCount',
+        'minProfitRate',
         'isAmazonOnly',
         'isFBAOnly'
       ]);
@@ -250,10 +256,19 @@ class CarminePFSidePanel {
       //   url.searchParams.set('m', item.sellerId);
       // }
       
+      // Log profit information if available
+      let profitInfo = '';
+      if (item.profitRate !== null && item.profitRate !== undefined) {
+        profitInfo = ` | 利益率: ${item.profitRate.toFixed(2)}%`;
+        if (item.profitAmount !== null && item.profitAmount !== undefined) {
+          profitInfo += ` (¥${Math.round(item.profitAmount)})`;
+        }
+      }
+      
       if (item.sellerId) {
-        this.log(`セラーID情報: ${item.sellerId} (価格: ¥${item.price || 'N/A'}) - セラーIDパラメータ無しで開きます`, 'info');
+        this.log(`セラーID情報: ${item.sellerId} (価格: ¥${item.price || 'N/A'})${profitInfo} - セラーIDパラメータ無しで開きます`, 'info');
       } else {
-        this.log(`セラーID不明のため通常ページで開きます`, 'warn');
+        this.log(`セラーID不明のため通常ページで開きます${profitInfo}`, 'warn');
       }
       
       url.searchParams.set('ac', 'true');

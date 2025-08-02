@@ -9,12 +9,21 @@ export class ItemsService {
   constructor() {
     this.keepaProductService = new KeepaProductService();
   }
-  async getUnprocessedItems(): Promise<any[]> {
+  async getUnprocessedItems(minProfitRate?: number): Promise<any[]> {
     try {
+      // Build where clause with profit rate filter if specified
+      const whereClause: any = {
+        processedAt: null
+      };
+      
+      if (minProfitRate !== undefined && minProfitRate !== null) {
+        whereClause.profitRate = {
+          gte: minProfitRate
+        };
+      }
+      
       const items = await prisma.item.findMany({
-        where: {
-          processedAt: null
-        },
+        where: whereClause,
         include: {
           product: {
             select: {
@@ -34,7 +43,8 @@ export class ItemsService {
             id: item.id,
             asin: item.product.asin,
             sellerId: item.sellerId || 'N/A',
-            price: item.price ? `¥${item.price}` : 'N/A'
+            price: item.price ? `¥${item.price}` : 'N/A',
+            profitRate: item.profitRate ? `${item.profitRate.toFixed(2)}%` : 'N/A'
           }))
         });
       }
@@ -166,13 +176,18 @@ export class ItemsService {
           )
         );
 
-        // Create items with seller info
+        // Create items with seller info and profit data
         const itemsData = productIds.map(product => {
           const productInfo = productInfoMap.get(product.asin);
           return {
             productId: product.id,
             sellerId: productInfo?.cheapestNewSellerId || null,
             price: productInfo?.cheapestNewPrice || null,
+            averagePrice90Days: productInfo?.averagePrice90Days || null,
+            referralFeePercentage: productInfo?.referralFeePercentage || null,
+            fbaFees: productInfo?.fbaFees || null,
+            profitAmount: productInfo?.profitAmount || null,
+            profitRate: productInfo?.profitRate || null,
             // Mark as processed if this is the first run after start
             processedAt: null  // Will be marked as processed separately if needed
           };

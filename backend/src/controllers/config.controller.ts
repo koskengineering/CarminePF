@@ -11,7 +11,7 @@ export class ConfigController {
 
   updateConfig = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { url, deleteAfterDays, isAmazonOnly, isFBAOnly, minStarRating, minReviewCount } = req.body;
+      const { url, deleteAfterDays, isAmazonOnly, isFBAOnly, minStarRating, minReviewCount, minProfitRate } = req.body;
 
       if (!url) {
         res.status(400).json({ error: 'URL is required' });
@@ -44,7 +44,8 @@ export class ConfigController {
         isAmazonOnly: isAmazonOnly || false,
         isFBAOnly: isFBAOnly || false,
         minStarRating: minStarRating || null,
-        minReviewCount: minReviewCount || null
+        minReviewCount: minReviewCount || null,
+        minProfitRate: minProfitRate || null
       });
 
       // Clear items and ids when config is updated

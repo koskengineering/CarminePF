@@ -11,19 +11,20 @@ datasource db {
 }
 
 model Config {
-  id            Int      @id @default(autoincrement())
-  url           String
-  apiKey        String
-  isActive      Boolean  @default(false)
-  checkInterval Int      @default(60) // seconds
-  deleteAfterDays Int    @default(7)
-  isAmazonOnly  Boolean  @default(false)
-  isFBAOnly     Boolean  @default(false)
-  minStarRating Float?
-  minReviewCount Int?
-  isFirstRun    Boolean  @default(true) // Track if this is the first execution
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  url              String
+  apiKey           String
+  isActive         Boolean  @default(false)
+  checkInterval    Int      @default(60) // seconds
+  deleteAfterDays  Int      @default(7)
+  isAmazonOnly     Boolean  @default(false)
+  isFBAOnly        Boolean  @default(false)
+  minStarRating    Float?
+  minReviewCount   Int?
+  minProfitRate    Float?   // Minimum profit rate as percentage (e.g., 15.0 for 15%)
+  isFirstRun       Boolean  @default(true) // Track if this is the first execution
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model ProductId {
@@ -34,13 +35,18 @@ model ProductId {
 }
 
 model Item {
-  id           Int       @id @default(autoincrement())
-  productId    Int
-  product      ProductId @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sellerId     String?   // Amazon seller ID for the cheapest new offer
-  price        Float?    // Price in yen (smallest unit)
-  processedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  id                    Int       @id @default(autoincrement())
+  productId             Int
+  product               ProductId @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sellerId              String?   // Amazon seller ID for the cheapest new offer
+  price                 Float?    // Current new price (purchase price) in yen
+  averagePrice90Days    Float?    // 90-day average price (selling price) in yen
+  referralFeePercentage Float?    // Amazon referral fee percentage (e.g., 0.15 for 15%)
+  fbaFees               Float?    // FBA fees in yen
+  profitAmount          Float?    // Calculated profit amount in yen
+  profitRate            Float?    // Calculated profit rate as percentage
+  processedAt           DateTime?
+  createdAt             DateTime  @default(now())
 }
 
 // SQLiteはインデックスを自動的に処理
