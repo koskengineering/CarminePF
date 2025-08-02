@@ -244,17 +244,17 @@ class CarminePFSidePanel {
         'isFBAOnly'
       ]);
 
-      // Create URL with th and psc parameters (seller ID temporarily disabled)
+      // Create URL with th and psc parameters and seller ID
       let url = new URL(`https://www.amazon.co.jp/dp/${item.asin}`);
       
       // Always add th and psc parameters
       url.searchParams.set('th', '1');
       url.searchParams.set('psc', '1');
       
-      // TODO: Re-enable seller ID parameter later
-      // if (item.sellerId) {
-      //   url.searchParams.set('m', item.sellerId);
-      // }
+      // Add seller ID parameter if available
+      if (item.sellerId) {
+        url.searchParams.set('m', item.sellerId);
+      }
       
       // Log profit information if available
       let profitInfo = '';
@@ -266,7 +266,7 @@ class CarminePFSidePanel {
       }
       
       if (item.sellerId) {
-        this.log(`セラーID情報: ${item.sellerId} (価格: ¥${item.price || 'N/A'})${profitInfo} - セラーIDパラメータ無しで開きます`, 'info');
+        this.log(`セラーID指定で開きます: ${item.sellerId} (価格: ¥${item.price || 'N/A'})${profitInfo}`, 'info');
       } else {
         this.log(`セラーID不明のため通常ページで開きます${profitInfo}`, 'warn');
       }
