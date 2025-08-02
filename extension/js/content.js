@@ -51,6 +51,12 @@
     if (isCheckoutPage || isPaymentPage || isOrderCompletePage) {
       const pageType = isPaymentPage ? 'payment' : (isCheckoutPage ? 'checkout' : 'order complete');
       this.log(`Detected ${pageType} page (${window.location.href}), will close in 10 seconds`, 'info');
+      
+      // Handle inventory unavailable message on checkout page
+      if (isCheckoutPage) {
+        this.handleInventoryUnavailable();
+      }
+      
       setTimeout(() => {
         this.log('Auto-closing page', 'info');
         window.close();
@@ -839,6 +845,67 @@
         }
       });
     }, 10000);
+  }
+
+  async handleInventoryUnavailable() {
+    try {
+      // Wait for page to load
+      await this.sleep(2000);
+      
+      // Check for inventory unavailable message
+      const unavailableMessage = document.querySelector('[data-messageid="ItemQuantityUnavailableCVMessage"]');
+      
+      if (unavailableMessage) {
+        this.log('Inventory unavailable message detected, looking for continue button', 'info');
+        
+        // Find the continue button
+        const continueButton = document.querySelector('#checkout-secondary-continue-button-id input[type="submit"], input[data-testid="secondary-continue-button"]');
+        
+        if (continueButton && !continueButton.disabled) {
+          this.log('Clicking continue button to proceed with available quantity', 'info');
+          
+          // Click the continue button
+          continueButton.click();
+          
+          // Also try submitting the form if click doesn't work
+          if (continueButton.form) {
+            setTimeout(() => {
+              if (window.location.href.includes('/checkout/')) {
+                continueButton.form.submit();
+              }
+            }, 500);
+          }
+        } else {
+          this.log('Continue button not found or disabled', 'warn');
+        }
+      }
+      
+      // Set up observer to watch for the message if it appears later
+      const observer = new MutationObserver((mutations, obs) => {
+        const unavailableMsg = document.querySelector('[data-messageid="ItemQuantityUnavailableCVMessage"]');
+        if (unavailableMsg) {
+          this.log('Inventory unavailable message appeared, handling...', 'info');
+          
+          const continueBtn = document.querySelector('#checkout-secondary-continue-button-id input[type="submit"], input[data-testid="secondary-continue-button"]');
+          if (continueBtn && !continueBtn.disabled) {
+            this.log('Clicking continue button after message appeared', 'info');
+            continueBtn.click();
+            obs.disconnect();
+          }
+        }
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+      
+      // Disconnect observer after 8 seconds to prevent memory leaks
+      setTimeout(() => observer.disconnect(), 8000);
+      
+    } catch (error) {
+      this.log(`Error handling inventory unavailable: ${error.message}`, 'error');
+    }
   }
 }
 
