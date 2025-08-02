@@ -67,15 +67,11 @@ export class KeepaService {
         const filteredAsins = this.filterAsins(asins, config);
         
         if (config.isFirstRun) {
-          // First run: Create items but mark them as processed immediately
-          logger.info(`🏁 First run: Processing ${filteredAsins.length} ASINs as baseline`);
+          // First run: Save ASINs as baseline without fetching from Keepa API
+          logger.info(`🏁 First run: Saving ${filteredAsins.length} ASINs as baseline`);
           
-          // Create items for all ASINs (including fetching seller info)
-          const keepaApiKey = process.env.KEEPA_API_KEY || config.apiKey;
-          await this.itemsService.createItemsForNewAsins(filteredAsins, keepaApiKey);
-          
-          // Mark all unprocessed items as processed (baseline)
-          await this.itemsService.markAllUnprocessedItemsAsProcessed();
+          // Save ASINs as baseline only (no API calls)
+          await this.itemsService.saveAsinsAsBaseline(filteredAsins);
           
           // Mark first run as complete
           await this.configService.markFirstRunComplete();
