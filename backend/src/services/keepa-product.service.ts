@@ -24,6 +24,7 @@ interface KeepaProduct {
   asin: string;
   title?: string;
   offers?: KeepaOffer[];
+  liveOffersOrder?: number[]; // Array of indices for currently active offers
   stats?: {
     current?: number[]; // [Amazon, New, Used, Sales Rank, ...]
     avg?: number[][]; // Average prices [[30day], [90day], [180day], ...]
@@ -172,34 +173,71 @@ export class KeepaProductService {
    * Process offers data when available
    */
   private processOffersData(product: KeepaProduct): ProductInfo {
-    const { asin, title, offers, stats } = product;
+    const { asin, title, offers, liveOffersOrder, csv } = product;
     
-    // Filter for valid new offers (condition 1 = New only)
-    const newOffers = offers!.filter(offer => 
-      offer.condition !== undefined &&
-      offer.condition === 1 && // 1 = New (not 0 = Unknown)
-      offer.sellerId && 
-      offer.offerCSV &&
-      offer.offerCSV.length >= 2 &&
-      offer.offerCSV[offer.offerCSV.length - 2] > 0 // Latest price > 0
-    );
+    // Use csv[1] latest price as purchase price
+    let purchasePrice = null;
+    if (csv && csv[1] && csv[1].length > 0) {
+      const latestPrice = csv[1][csv[1].length - 1];
+      if (latestPrice > 0) {
+        purchasePrice = latestPrice;
+      }
+    }
+    
+    // Get seller info from liveOffersOrder
+    let sellerId = null;
+    let isFBA = false;
+    let isPrime = false;
+    
+    if (liveOffersOrder && liveOffersOrder.length > 0 && offers && offers.length > 0) {
+      // Use the first active offer (best available offer)
+      const firstActiveOfferIndex = liveOffersOrder[0];
+      if (firstActiveOfferIndex < offers.length) {
+        const activeOffer = offers[firstActiveOfferIndex];
+        if (activeOffer.condition === 1) { // Only use new condition offers
+          sellerId = activeOffer.sellerId;
+          isFBA = activeOffer.isFBA || false;
+          isPrime = activeOffer.isPrime || false;
+        }
+      }
+    }
+    
+    // Fallback: if no purchasePrice from csv[1], try offers
+    if (!purchasePrice && offers && offers.length > 0) {
+      const newOffers = offers.filter(offer => 
+        offer.condition !== undefined &&
+        offer.condition === 1 && 
+        offer.sellerId && 
+        offer.offerCSV &&
+        offer.offerCSV.length >= 2 &&
+        offer.offerCSV[offer.offerCSV.length - 2] > 0
+      );
 
-    if (newOffers.length === 0) {
+      if (newOffers.length > 0) {
+        // Sort by total price
+        newOffers.sort((a, b) => {
+          const priceA = a.offerCSV![a.offerCSV!.length - 2];
+          const shippingA = a.offerCSV![a.offerCSV!.length - 1] || 0;
+          const priceB = b.offerCSV![b.offerCSV!.length - 2];
+          const shippingB = b.offerCSV![b.offerCSV!.length - 1] || 0;
+          return (priceA + shippingA) - (priceB + shippingB);
+        });
+
+        const cheapestOffer = newOffers[0];
+        purchasePrice = cheapestOffer.offerCSV![cheapestOffer.offerCSV!.length - 2];
+        
+        // Use seller info from cheapest offer if not set from liveOffersOrder
+        if (!sellerId) {
+          sellerId = cheapestOffer.sellerId;
+          isFBA = cheapestOffer.isFBA || false;
+          isPrime = cheapestOffer.isPrime || false;
+        }
+      }
+    }
+    
+    if (!purchasePrice) {
       return this.createEmptyProductInfo(product);
     }
-
-    // Sort by total price (latest price + latest shipping)
-    newOffers.sort((a, b) => {
-      const priceA = a.offerCSV![a.offerCSV!.length - 2];
-      const shippingA = a.offerCSV![a.offerCSV!.length - 1] || 0;
-      const priceB = b.offerCSV![b.offerCSV!.length - 2];
-      const shippingB = b.offerCSV![b.offerCSV!.length - 1] || 0;
-      return (priceA + shippingA) - (priceB + shippingB);
-    });
-
-    const cheapestOffer = newOffers[0];
-    // Convert from yen (smallest currency unit) to yen - no conversion needed for Japan
-    const purchasePrice = cheapestOffer.offerCSV![cheapestOffer.offerCSV!.length - 2];
 
     // Get 90-day average price
     const averagePrice90Days = this.get90DayAveragePrice(product);
@@ -221,15 +259,15 @@ export class KeepaProductService {
     return {
       asin,
       title: title || 'Unknown Product',
-      cheapestNewSellerId: cheapestOffer.sellerId,
+      cheapestNewSellerId: sellerId,
       cheapestNewPrice: purchasePrice,
       averagePrice90Days,
       referralFeePercentage,
       fbaFees,
       profitAmount,
       profitRate,
-      isFBA: cheapestOffer.isFBA || false,
-      isPrime: cheapestOffer.isPrime || false
+      isFBA,
+      isPrime
     };
   }
 
@@ -237,44 +275,40 @@ export class KeepaProductService {
    * Process fallback data when offers are not available
    */
   private processFallbackData(product: any): ProductInfo {
-    const { asin, title } = product;
+    const { asin, title, csv } = product;
     
     let sellerId = null;
     let purchasePrice = null;
     let isFBA = false;
     let isPrime = false;
 
-    // Try to get seller from buyBoxSellerIdHistory
-    if (product.buyBoxSellerIdHistory && product.buyBoxSellerIdHistory.length >= 2) {
-      const lastSellerId = product.buyBoxSellerIdHistory[product.buyBoxSellerIdHistory.length - 1];
-      // -1 = no seller, -2 = Amazon
-      if (lastSellerId && lastSellerId !== '-1') {
-        sellerId = lastSellerId === '-2' ? 'AN1VRQENFRJN5' : lastSellerId; // Amazon's seller ID
+    // Use csv[1] latest price as purchase price (same as offers data processing)
+    if (csv && csv[1] && csv[1].length > 0) {
+      const latestPrice = csv[1][csv[1].length - 1];
+      if (latestPrice > 0) {
+        purchasePrice = latestPrice;
       }
     }
 
-    // Try to get price from stats
-    if (product.stats && product.stats.current) {
+    // Fallback: try stats.current if csv[1] not available
+    if (!purchasePrice && product.stats && product.stats.current) {
       // stats.current[0] = Amazon price, stats.current[1] = New price
       if (product.stats.current[1] > 0) {
         purchasePrice = product.stats.current[1];
       } else if (product.stats.current[0] > 0) {
         purchasePrice = product.stats.current[0];
-        sellerId = sellerId || 'AN1VRQENFRJN5'; // Amazon seller
+        sellerId = 'AN1VRQENFRJN5'; // Amazon seller
       }
     }
 
-    // Alternative: Get price from CSV data
-    if (!purchasePrice && product.csv) {
-      // csv[0] = Amazon, csv[1] = New
-      for (let i = 0; i < 2 && i < product.csv.length; i++) {
-        if (product.csv[i] && product.csv[i].length > 0) {
-          const lastPrice = product.csv[i][product.csv[i].length - 1];
-          if (lastPrice > 0) {
-            purchasePrice = lastPrice;
-            if (i === 0) sellerId = sellerId || 'AN1VRQENFRJN5'; // Amazon price
-            break;
-          }
+    // Alternative fallback: Get price from other CSV data
+    if (!purchasePrice && csv) {
+      // csv[0] = Amazon, csv[1] = New (already tried above), try Amazon
+      if (csv[0] && csv[0].length > 0) {
+        const lastPrice = csv[0][csv[0].length - 1];
+        if (lastPrice > 0) {
+          purchasePrice = lastPrice;
+          sellerId = 'AN1VRQENFRJN5'; // Amazon price
         }
       }
     }
